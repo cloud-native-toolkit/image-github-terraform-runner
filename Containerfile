@@ -54,5 +54,3 @@ COPY --chown=${USERNAME}:0 entrypoint.sh uid.sh register.sh get_github_app_token
 USER $UID
 
 ENTRYPOINT ./entrypoint.sh
-
-# Test comment
