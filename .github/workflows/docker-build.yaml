@@ -143,3 +143,11 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.cntk-meta.outputs.tags }}
           labels: ${{ steps.cntk-meta.outputs.labels }}
+
+  verify:
+    needs: ["build"]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
+
+    steps:
+      - run: echo "Success"
