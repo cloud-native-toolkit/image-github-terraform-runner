@@ -17,10 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         base:
-          - terraform
-          - cli-tools-core
-          - cli-tools-ibmcloud
-          - cli-tools
+          - terraform:v2.0.4
+          - cli-tools-core:v1.4.1
+          - cli-tools-ibmcloud:v0.4.1
+          - cli-tools:v2.2.2
         version:
           - v1.0
           - v1.1
@@ -58,9 +58,11 @@ jobs:
         shell: bash
         run: |
           SHORT_TERRAFORM=${{ matrix.version }}
+          BASE=$(echo "${{ matrix.base }}" | sed -E "s/(.*):(.*)/\1/g") 
+          BASE_VERSION=$(echo "${{ matrix.base }}" | sed -E "s/(.*):(.*)/\2/g") 
           
           SHORT_TAG_ENABLED="false"
-          if [[ "${{ matrix.base }}" == "cli-tools" ]]; then
+          if [[ "${BASE}" == "cli-tools" ]]; then
             SHORT_TAG_ENABLED="true"
           fi
           
@@ -69,7 +71,7 @@ jobs:
           if [[ "${SHORT_TERRAFORM}" == "${TERRAFORM_LATEST}" ]]; then
             BASE_ENABLED="true"
             
-            if [[ "${{ matrix.base }}" == "cli-tools" ]]; then
+            if [[ "${BASE}" == "cli-tools" ]]; then
               LATEST_ENABLED="true"
             fi
           fi
@@ -80,7 +82,7 @@ jobs:
           if [[ "${GITHUB_REF}" =~ refs/tags ]] && [[ "${RELEASE_TAG}" != "main" ]]; then
             RELEASE_TAG_ENABLED="true"
           
-            if [[ "${{ matrix.base }}" == "cli-tools" ]]; then
+            if [[ "${BASE}" == "cli-tools" ]]; then
               RELEASE_TAG_SHORT_ENABLED="true"
             fi
           else
@@ -107,6 +109,12 @@ jobs:
           
           echo "Latest enabled: $LATEST_ENABLED"
           echo "::set-output name=latest-enabled::$LATEST_ENABLED"
+          
+          echo "Base: $BASE"
+          echo "::set-output name=base::$BASE"
+          
+          echo "Base version: $BASE_VERSION"
+          echo "::set-output name=base-version::$BASE_VERSION"
 
       - name: Docker CNTK meta ${{ matrix.base }}:${{ matrix.version }}
         id: cntk-meta
@@ -117,11 +125,11 @@ jobs:
             quay.io/cloudnativetoolkit/github-terraform-runner
           # Docker tags based on the following events/attributes
           tags: |
-            type=raw,value=${{ steps.variables.outputs.terraform }}-${{ matrix.base }}
+            type=raw,value=${{ steps.variables.outputs.terraform }}-${{ steps.variables.outputs.base }}
             type=raw,value=${{ steps.variables.outputs.terraform }},enable=${{ steps.variables.outputs.short-enabled }}
-            type=raw,value=${{ steps.variables.outputs.terraform }}-${{ steps.variables.outputs.release-tag }}-${{ matrix.base }},enable=${{ steps.variables.outputs.release-tag-enabled }}
+            type=raw,value=${{ steps.variables.outputs.terraform }}-${{ steps.variables.outputs.release-tag }}-${{ steps.variables.outputs.base }},enable=${{ steps.variables.outputs.release-tag-enabled }}
             type=raw,value=${{ steps.variables.outputs.terraform }}-${{ steps.variables.outputs.release-tag }},enable=${{ steps.variables.outputs.release-tag-short-enabled }}
-            type=raw,value=${{ matrix.base }},enable=${{ steps.variables.outputs.base-enabled }}
+            type=raw,value=${{ steps.variables.outputs.base }},enable=${{ steps.variables.outputs.base-enabled }}
             type=raw,value=latest,enable=${{ steps.variables.outputs.latest-enabled }}
 
       - name: Build and push ${{ matrix.base }}:${{ matrix.version }}
@@ -130,8 +138,17 @@ jobs:
           context: .
           file: Containerfile
           build-args: |
-            IMAGE=quay.io/cloudnativetoolkit/${{ matrix.base }}:${{ matrix.version }}-fedora
+            IMAGE=quay.io/cloudnativetoolkit/${{ steps.variables.outputs.base }}:${{ matrix.version }}-${{ steps.variables.outputs.base-version }}-fedora
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64
           tags: ${{ steps.cntk-meta.outputs.tags }}
           labels: ${{ steps.cntk-meta.outputs.labels }}
+
+  verify:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify
+        run: |
+          echo "Success"
