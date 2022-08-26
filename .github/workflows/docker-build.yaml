@@ -145,9 +145,10 @@ jobs:
           labels: ${{ steps.cntk-meta.outputs.labels }}
 
   verify:
-    needs: ["build"]
+    needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
 
     steps:
-      - run: echo "Success"
+      - name: Verify
+        run: |
+          echo "Success"
