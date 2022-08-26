@@ -1,0 +1,102 @@
+name: Update dependencies
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the main branch
+on:
+  repository_dispatch:
+    types: [ released ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    env:
+      REF: ${{ github.event.client_payload.ref }}
+      REPO: ${{ github.event.client_payload.repo }}
+      SHA: ${{ github.event.client_payload.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup variables
+        id: variables
+        run: |
+          VERSION=$(echo "${REF}" | sed -E "s~refs/tags/(.*)~\1~g")
+          echo "Base image version: ${VERSION}"
+          echo "::set-output name=version::$VERSION"
+          
+          IMAGE=$(echo "${REPO}" | sed -E "s~.*/image-(.*)~\1~g")
+          echo "Base image: ${IMAGE}"
+          echo "::set-output name=base-image::$IMAGE"
+
+      - name: Update base image
+        run: |
+          BASE_IMAGE="${{ steps.variables.outputs.base-image }}"
+          NEW_VERSION="${{ steps.variables.outputs.version }}"
+          
+          FILE=".github/workflows/docker-build.yaml"
+          
+          CURRENT_VERSION=$(cat "${FILE}" | grep -E "${BASE_IMAGE}:" | sed -E "s/.*(v[0-9]+[.][0-9]+[.][0-9]+)-.*/\1/g")
+          
+          if [[ -z "${CURRENT_VERSION}" ]]; then
+            echo "Unable to find current version for base image: ${BASE_IMAGE}"
+            exit 0
+          fi
+        
+          cat "${FILE}" | sed "s~${BASE_IMAGE}:${CURRENT_VERSION}~${BASE_IMAGE}:${NEW_VERSION}~g" > "${FILE}.bak"
+          cp "${FILE}.bak" "${FILE}"
+          rm "${FILE}.bak"
+
+      - name: Generate commit message
+        id: setup
+        run: |
+          TAG=$(echo "$REF" | sed -E "s~refs/tags/(.*)~\1~g")
+          PATCH=$(echo "$TAG" | sed -E "s/v{0,1}[0-9]+[.][0-9]+[.]([0-9]+)/\1/g")
+
+          if [[ "$PATCH" -eq 0 ]]; then
+            CHANGE="feature"
+            RELEASE="minor"
+          else
+            CHANGE="bug"
+            RELEASE="patch"
+          fi
+
+          if [[ -n "${TAG}" ]]; then
+            MESSAGE="Updates $REPO module to $TAG"
+          else
+            MESSAGE="Updates $REPO module"
+          fi
+          BODY="${REPO}#${SHA}"
+
+          echo "TAG: $TAG"
+          echo "CHANGE: $CHANGE"
+          echo "MESSAGE: $MESSAGE"
+
+          echo "::set-output name=message::${MESSAGE}"
+          echo "::set-output name=body::${BODY}"
+          echo "::set-output name=change::${CHANGE}"
+          echo "::set-output name=release::${RELEASE}"
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: "${{ steps.setup.outputs.message }}"
+          body: "${{ steps.setup.outputs.body }}"
+          commit-message: "${{ steps.setup.outputs.message }}"
+          token: ${{ secrets.TOKEN }}
+          branch: "${{ github.event.client_payload.repo }}"
+          delete-branch: true
+          labels: ${{ steps.setup.outputs.change }},${{ steps.setup.outputs.release }}
+          reviewers: ${{ secrets.ASSIGNEES }}
+          signoff: true
+
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-operation == 'created'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
