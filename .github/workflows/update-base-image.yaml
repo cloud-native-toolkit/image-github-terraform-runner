@@ -44,8 +44,14 @@ jobs:
             echo "Unable to find current version for base image: ${BASE_IMAGE}"
             exit 0
           fi
+          
+          echo "Updating ${CURRENT_VERSION} to ${NEW_VERSION} for image ${BASE_IMAGE} in ${FILE}"
         
           cat "${FILE}" | sed "s~${BASE_IMAGE}:${CURRENT_VERSION}~${BASE_IMAGE}:${NEW_VERSION}~g" > "${FILE}.bak"
+          
+          echo ""
+          echo "Updated file"
+          cat "${FILE}.bak"
           cp "${FILE}.bak" "${FILE}"
           rm "${FILE}.bak"
 
