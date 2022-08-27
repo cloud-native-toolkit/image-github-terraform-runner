@@ -19,7 +19,7 @@ jobs:
         base:
           - terraform:v2.0.4
           - cli-tools-core:v1.4.3
-          - cli-tools-ibmcloud:v0.4.6
+          - cli-tools-ibmcloud:v0.4.7
           - cli-tools:v2.2.2
         version:
           - v1.0
