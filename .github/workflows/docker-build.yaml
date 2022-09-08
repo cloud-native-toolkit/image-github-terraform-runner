@@ -18,7 +18,7 @@ jobs:
       matrix:
         base:
           - terraform:v2.0.4
-          - cli-tools-core:v1.4.9
+          - cli-tools-core:v1.4.10
           - cli-tools-ibmcloud:v0.4.13
           - cli-tools:v2.2.9
         version:
