@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         base:
-          - terraform:v2.0.4
+          - terraform:v4.0.1
           - cli-tools-core:v2.0.2
           - cli-tools-ibmcloud:v0.8.3
           - cli-tools:v3.0.2
@@ -91,31 +91,31 @@ jobs:
           fi
           
           echo "Short terraform: ${SHORT_TERRAFORM}"
-          echo "::set-output name=terraform::$SHORT_TERRAFORM"
+          echo "terraform=$SHORT_TERRAFORM" >> $GITHUB_OUTPUT
           
           echo "Short tag enabled: $SHORT_TAG_ENABLED"
-          echo "::set-output name=short-enabled::$SHORT_TAG_ENABLED"
+          echo "short-enabled=$SHORT_TAG_ENABLED" >> $GITHUB_OUTPUT
           
           echo "Release tag: ${RELEASE_TAG}"
-          echo "::set-output name=release-tag::$RELEASE_TAG"
+          echo "release-tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
           
           echo "Release tag enabled: $RELEASE_TAG_ENABLED"
-          echo "::set-output name=release-tag-enabled::$RELEASE_TAG_ENABLED"
+          echo "release-tag-enabled=$RELEASE_TAG_ENABLED" >> $GITHUB_OUTPUT
           
           echo "Release tag short enabled: $RELEASE_TAG_SHORT_ENABLED"
-          echo "::set-output name=release-tag-short-enabled::$RELEASE_TAG_SHORT_ENABLED"
+          echo "release-tag-short-enabled=$RELEASE_TAG_SHORT_ENABLED" >> $GITHUB_OUTPUT
           
           echo "Base enabled: $BASE_ENABLED"
-          echo "::set-output name=base-enabled::$BASE_ENABLED"
+          echo "base-enabled=$BASE_ENABLED" >> $GITHUB_OUTPUT
           
           echo "Latest enabled: $LATEST_ENABLED"
-          echo "::set-output name=latest-enabled::$LATEST_ENABLED"
+          echo "latest-enabled=$LATEST_ENABLED" >> $GITHUB_OUTPUT
           
           echo "Base: $BASE"
-          echo "::set-output name=base::$BASE"
+          echo "base=$BASE" >> $GITHUB_OUTPUT
           
           echo "Base version: $BASE_VERSION"
-          echo "::set-output name=base-version::$BASE_VERSION"
+          echo "base-version=$BASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Docker CNTK meta ${{ matrix.base }}:${{ matrix.version }}
         id: cntk-meta
