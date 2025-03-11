@@ -42,9 +42,11 @@ ENV EPHEMERAL ""
 
 # Allow group 0 to modify these /etc/ files since on openshift, the dynamically-assigned user is always part of group 0.
 # Also see ./uid.sh for the usage of these permissions.
-RUN sudo chmod g+w /etc/passwd && \
-    sudo touch /etc/sub{g,u}id && \
-    sudo chmod -v ug+rw /etc/sub{g,u}id
+RUN chmod g+w /etc/passwd && \
+    touch /etc/sub{g,u}id && \
+    chmod -v ug+rw /etc/sub{g,u}id
+
+USER $USERNAME
 
 COPY --chown=${USERNAME}:0 get-runner-release.sh ./
 RUN ./get-runner-release.sh
