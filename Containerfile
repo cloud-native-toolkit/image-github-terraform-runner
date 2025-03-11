@@ -5,8 +5,15 @@ USER root
 
 # Adapted from https://github.com/bbrowning/github-runner/blob/master/Dockerfile
 RUN dnf -y upgrade --security && \
-    dnf -y --setopt=skip_missing_names_on_install=False install \
-    curl git jq hostname procps findutils which openssl && \
+    dnf -y install \
+        curl \
+        git \
+        jq \
+        hostname \
+        procps \
+        findutils \
+        which \
+        openssl && \
     dnf clean all
 
 # The UID env var should be used in child Containerfile.
@@ -15,10 +22,11 @@ ENV GID=0
 ENV USERNAME="runner"
 
 # Create our user and their home directory
-RUN useradd -m $USERNAME -u $UID
-# This is to mimic the OpenShift behaviour of adding the dynamic user to group 0.
-RUN usermod -G 0 $USERNAME
-ENV HOME /home/${USERNAME}
+RUN useradd -m $USERNAME -u $UID && \
+    usermod -G 0 $USERNAME
+
+ENV HOME=/home/${USERNAME}
+
 WORKDIR /home/${USERNAME}
 
 # Override these when creating the container.
@@ -35,22 +43,19 @@ ENV EPHEMERAL ""
 
 # Allow group 0 to modify these /etc/ files since on openshift, the dynamically-assigned user is always part of group 0.
 # Also see ./uid.sh for the usage of these permissions.
-RUN sudo chmod g+w /etc/passwd && \
-    sudo touch /etc/sub{g,u}id && \
-    sudo chmod -v ug+rw /etc/sub{g,u}id
-
 COPY --chown=${USERNAME}:0 get-runner-release.sh ./
-RUN ./get-runner-release.sh
-RUN ./bin/installdependencies.sh
 
-# Set permissions so that we can allow the openshift-generated container user to access home.
-# https://docs.openshift.com/container-platform/3.3/creating_images/guidelines.html#openshift-container-platform-specific-guidelines
-RUN chown -R ${USERNAME}:0 /home/${USERNAME}/ && \
+RUN chmod g+w /etc/passwd && \
+    touch /etc/sub{g,u}id && \
+    chmod -v ug+rw /etc/sub{g,u}id && \
+    ./get-runner-release.sh && \
+    ./bin/installdependencies.sh && \
+    chown -R ${USERNAME}:0 /home/${USERNAME}/ && \
     chgrp -R 0 /home/${USERNAME}/ && \
     chmod -R g=u /home/${USERNAME}/
 
 COPY --chown=${USERNAME}:0 entrypoint.sh uid.sh register.sh get_github_app_token.sh ./
 
-USER $UID
+USER $USERNAME
 
-ENTRYPOINT ./entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]
